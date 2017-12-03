@@ -5,3 +5,9 @@ tmp/*
 FW.json
 launcher_*/*
 .watch_job_*
+
+# Torque job submission
+*.[o,e][0-9]*
+
+# Install files
+kale_workflows.egg-info/
