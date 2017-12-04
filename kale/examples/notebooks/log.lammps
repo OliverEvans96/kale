@@ -1,0 +1,79 @@
+LAMMPS (19 Jul 2011)
+# 3d Lennard-Jones melt
+
+processors  1 1 1
+units		lj
+atom_style	atomic
+
+lattice		fcc 0.8442
+Lattice spacing in x,y,z = 1.6796 1.6796 1.6796
+region		box block 0 10 0 10 0 10
+create_box	1 box
+Created orthogonal box = (0 0 0) to (16.796 16.796 16.796)
+  1 by 1 by 1 processor grid
+create_atoms	1 box
+Created 4000 atoms
+mass		1 1.0
+
+velocity	all create 3.0 87287
+
+pair_style	lj/cut 2.5
+pair_coeff	1 1 1.0 1.0 2.5
+
+neighbor	0.3 bin
+neigh_modify	every 20 delay 0 check no
+
+fix		1 all nve
+
+#dump		id all atom 50 dump.melt
+thermo		500
+dump		500 all custom 50 melt.lammpstrj id type xs ys zs ix iy iz
+run	10000
+Memory usage per processor = 2.35378 Mbytes
+Step Temp E_pair E_mol TotEng Press 
+       0            3   -6.7733681            0   -2.2744931   -3.7033504 
+     500    1.6381567    -4.739199            0   -2.2825782    5.9221821 
+    1000     1.654707    -4.768106            0    -2.286666    5.7734903 
+    1500    1.6275599   -4.7306044            0   -2.2898749    5.9056359 
+    2000     1.629811   -4.7369556            0   -2.2928502    5.9071009 
+    2500    1.6217006   -4.7278684            0   -2.2959256    5.9412926 
+    3000    1.6355277   -4.7510006            0   -2.2983223    5.8660135 
+    3500    1.6358681   -4.7558783            0   -2.3026896    5.8186982 
+    4000    1.6326836   -4.7550479            0   -2.3066347    5.8100964 
+    4500    1.6467562    -4.778637            0   -2.3091202    5.7077581 
+    5000    1.6398073   -4.7709787            0   -2.3118826    5.7839178 
+    5500    1.6462096   -4.7846277            0   -2.3159307    5.6708251 
+    6000    1.6219146   -4.7509873            0   -2.3187237     5.828503 
+    6500    1.6305474   -4.7673208            0   -2.3221112    5.7844513 
+    7000     1.640864   -4.7855824            0   -2.3249017    5.6922059 
+    7500    1.6245133   -4.7641203            0   -2.3279596    5.7972174 
+    8000    1.6038367   -4.7362017            0   -2.3310481     5.910558 
+    8500    1.6337549   -4.7841802            0   -2.3341605    5.6647872 
+    9000    1.6179257      -4.7637            0   -2.3374182    5.7641691 
+    9500    1.6394323   -4.7987394            0   -2.3402058    5.6295274 
+   10000    1.6011038   -4.7441836            0   -2.3431283     5.878123 
+Loop time of 227.762 on 1 procs for 10000 steps with 4000 atoms
+
+Pair  time (%) = 184.941 (81.1993)
+Neigh time (%) = 23.4078 (10.2773)
+Comm  time (%) = 5.79523 (2.54443)
+Outpt time (%) = 6.7775 (2.9757)
+Other time (%) = 6.84044 (3.00333)
+
+Nlocal:    4000 ave 4000 max 4000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    5490 ave 5490 max 5490 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    151504 ave 151504 max 151504 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 151504
+Ave neighs/atom = 37.876
+Neighbor list builds = 500
+Dangerous builds = 0
+
+#dump		2 all image 25 image.*.jpg type type #		axes yes 0.8 0.02 view 60 -30
+#dump_modify	2 pad 3
+
+#dump		3 all movie 25 movie.mpg type type #		axes yes 0.8 0.02 view 60 -30
+#dump_modify	3 pad 3

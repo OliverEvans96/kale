@@ -1,4 +1,5 @@
 import kale.workflow_objects
+import os
 
 t = kale.workflow_objects.Task('test')
 
@@ -20,7 +21,11 @@ The final results are printed to 'out.txt'.
 
 n_echos = 10
 n_tasks = 3
-out_file = "/tmp/scratch/out.txt"
+
+out_path = "/tmp/scratch"
+if not os.path.exists(out_path):
+    out_path = os.getcwd()
+out_file = os.path.join(out_path, 'out.txt')
 
 pwd_task = kale.workflow_objects.CommandLineTask(
     name='pwd_task',

@@ -630,8 +630,8 @@ class NotebookTask(Task):
         print("Notebook run.")
 
     def _gen_firetask(self):
-        self.randhash = batch_jobs.gen_random_hash()
-        self.success_file = batch_jobs.create_success_file()
+        self.randhash = kale.batch_jobs.gen_random_hash()
+        self.success_file = kale.batch_jobs.create_success_file()
 
         return fw.PyTask(
             func='kale.nb_task.nb_poll_success_file',

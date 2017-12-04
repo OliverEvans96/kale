@@ -6,4 +6,4 @@
 #PBS -N LAMMPS_Melt
 #PBS -r n
 cd $PBS_O_WORKDIR
-mpiexec -n 1 lammps < /home/oliver/lbl/kale/lammps_melt/in.melt
+mpiexec -n 1 lmp_bethel < /home/oge1/kale/kale/examples/lammps_melt/in.melt
