@@ -11,22 +11,37 @@ import os
 import subprocess
 from natsort import natsorted
 import numpy as np
-import workflow_objects as kale
+import kale
 
 # DIRs for each stage
 zipped_base = "/home/mtsige/Bob/"
 unzipped_base = "/home/oge1/lammps/sapphire/analysis/data/"
 results_base = "/home/oge1/lammps/sapphire/analysis/results/"
-zipped_subdir_list = ["Sub3", "Sub951By50", "Sub951By100", "Quartz"]
+zipped_subdir_list = ["Sub3", "Sub951By50", "Sub951By100", "Quartz", "LowContactAngle"]
 unzipped_subdir_list = ["Sphere_Sapphire", "Cyl_Sapphire", "Sphere_Quartz"]
 
 # Zipped/Prezipped files to ignore
-prezipped_ignore_list = []
-zipped_ignore_list = [
+prezipped_ignore_list = ([
+    'Sub951By100/Cyl50A/WrongCharge/atom{}'.format(i)
+    for i in range(1,5)
+] + [
+    'Sub951By100/Cyl100A/WrongCharge/New/atom{}'.format(i)
+    for i in range(1,32)
+])
+
+zipped_ignore_list = ([
     'Sub3/50A/atom2',
     'Sub3/50A/Repeat/atom1',
     'Sub951By50/atom1'
-]
+    'Sub951By100/Cyl100A/WrongCharge/atom1',
+    'Sub951By100/Cyl100A/WrongCharge/New/atom1'
+] + [
+    'Sub951By100/Cyl50A/WrongCharge/atom{}'.format(i)
+    for i in range(1,5)
+] + [
+    'Sub951By100/Cyl100A/WrongCharge/New/atom{}'.format(i)
+    for i in range(1,32)
+])
 
 # Name changes from zipped/prezipped to unzipped
 # Regex is okay.
@@ -37,11 +52,13 @@ name_changes = [
     ['Sub3', 'Sphere_Sapphire'],
     ['Sphere_Sapphire/50A/Repeat/atom2', r'Sphere_Sapphire/50A/atom2'],
     ['(Cyl[0-9]{2,3}A)/New', r'\1_New'],
-    [r'Sub951By(50|100)/(.*?Cyl[0-9]{2,3}A)', r'Cyl_Sapphire/\2_\1']
+    ['(Cyl[0-9]{2,3}A)/CorrectCharge', r'\1_CorrectCharge'],
+    [r'Sub951By(50|100)/(.*?Cyl[0-9]{2,3}A)', r'Cyl_Sapphire/\2_\1'],
 ]
 
 reverse_name_changes = [
     [r'Cyl_Sapphire/(.*?Cyl[0-9]{2,3}A)_(50|100)', r'Sub951By\2/\1'],
+    ['(Cyl[0-9]{2,3}A)_CorrectCharge', r'\1/CorrectCharge'],
     ['(Cyl[0-9]{2,3}A)_New', r'\1/New'],
     ['Sphere_Sapphire/50A/atom2', 'Sphere_Sapphire/50A/Repeat/atom2'],
     ['Sphere_Sapphire', 'Sub3'],
@@ -258,7 +275,7 @@ def whichstage():
 
 
 def create_workflow(needs_linked, needs_unzipped, needs_parsed, needs_analyzed):
-    workflow = kale.Workflow('Droplet Workflow')
+    workflow = kale.workflow_objects.Workflow('Droplet Workflow')
 
     condition = lambda partname: True #'Cyl_Sapphire' in partname and 'Cyl20A' not in partname
 
@@ -325,7 +342,7 @@ def create_link_task(partname, workflow, dependency=None):
     )
     command = "mkdir -p {dirname} && ln -s {source} {dest}"
 
-    task = kale.CommandLineTask(
+    task = kale.workflow_objects.CommandLineTask(
         name="link_{partname}",
         command=command,
         tags=['link'],
@@ -360,7 +377,7 @@ def create_unzip_task(partname, workflow,
     )
     command = "mkdir -p {dirname} && pbzip2 -n {num_cores} -cdk {source}.bz2 > {dest}"
 
-    task = kale.CommandLineTask(
+    task = kale.workflow_objects.CommandLineTask(
         name="unzip_{partname}",
         command=command,
         tags=['unzip'],
@@ -392,11 +409,11 @@ def create_parse_task(partname, workflow, dependency=None):
     script = "/home/oge1/lammps/sapphire/analysis/exec/parse.sh" 
     command = "{script} {source} {dest}"
 
-    task = kale.CommandLineTask(
+    task = kale.workflow_objects.CommandLineTask(
         name="parse_{partname}",
         command=command,
         tags=['parse'],
-        node_property='node',
+        #node_property='node',
                 params=dict(
             source=source,
             dest=dest,
@@ -421,19 +438,26 @@ def create_analyze_task(partname, workflow, dependency=None):
     )
     dest = partname
 
-    script = "/home/oge1/lammps/sapphire/analysis/exec/analyze.sh" 
-    command = "{script} {source} {dest} polarScatter"
+    # Determine whether to run spherical or cylindrical analysis
+    if 'Cyl' in partname:
+        root_cmd = 'cyl_analysis'
+    else:
+        root_cmd = 'polarScatter'
 
-    task = kale.CommandLineTask(
+    script = "/home/oge1/lammps/sapphire/analysis/exec/analyze.sh" 
+    command = "{script} {source} {dest} {root_cmd}"
+
+    task = kale.workflow_objects.CommandLineTask(
         name="analyze_{partname}",
         command=command,
         tags=['analyze'],
-        node_property='node',
+        #node_property='node',
                 params=dict(
             source=source,
             dest=dest,
             partname=partname,
-            script=script
+            script=script,
+            root_cmd=root_cmd
         )
     )
 
