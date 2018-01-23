@@ -17,30 +17,19 @@ import kale
 zipped_base = "/home/mtsige/Bob/"
 unzipped_base = "/home/oge1/lammps/sapphire/analysis/data/"
 results_base = "/home/oge1/lammps/sapphire/analysis/results/"
-zipped_subdir_list = ["Sub3", "Sub951By50", "Sub951By100", "Quartz", "LowContactAngle"]
-unzipped_subdir_list = ["Sphere_Sapphire", "Cyl_Sapphire", "Sphere_Quartz"]
+zipped_subdir_list = ["Sub3", "Sub951By50", "Sub951By100", "Quartz", "LowContactAngle", "LowContactAngle2"]
+unzipped_subdir_list = ["Sphere_Sapphire", "Cyl_Sapphire", "Sphere_Quartz", "LowContactAngle", "LowContactAngle2"]
 
 # Zipped/Prezipped files to ignore
-prezipped_ignore_list = ([
-    'Sub951By100/Cyl50A/WrongCharge/atom{}'.format(i)
-    for i in range(1,5)
-] + [
-    'Sub951By100/Cyl100A/WrongCharge/New/atom{}'.format(i)
-    for i in range(1,32)
-])
-
-zipped_ignore_list = ([
+ignore_list = ([
     'Sub3/50A/atom2',
     'Sub3/50A/Repeat/atom1',
-    'Sub951By50/atom1'
-    'Sub951By100/Cyl100A/WrongCharge/atom1',
-    'Sub951By100/Cyl100A/WrongCharge/New/atom1'
-] + [
-    'Sub951By100/Cyl50A/WrongCharge/atom{}'.format(i)
-    for i in range(1,5)
-] + [
-    'Sub951By100/Cyl100A/WrongCharge/New/atom{}'.format(i)
-    for i in range(1,32)
+    'Sub951By50/atom1',
+    'Sub3/Hemi50A',
+    # Includes "Cyl", but not "Correct"
+    # (most Cyl are wrong, so we only want the correct ones.
+    # https://stackoverflow.com/questions/8240765/is-there-a-regex-to-match-a-string-that-contains-a-but-does-not-contain-b
+    '^(?=.*Cyl)(?!.*Correct).*'
 ])
 
 # Name changes from zipped/prezipped to unzipped
@@ -54,9 +43,11 @@ name_changes = [
     ['(Cyl[0-9]{2,3}A)/New', r'\1_New'],
     ['(Cyl[0-9]{2,3}A)/CorrectCharge', r'\1_CorrectCharge'],
     [r'Sub951By(50|100)/(.*?Cyl[0-9]{2,3}A)', r'Cyl_Sapphire/\2_\1'],
+    [r'Sphere_Sapphire/Hemi50A', r'misc/Hemi50A']
 ]
 
 reverse_name_changes = [
+    [r'misc_Hemi50A', r'Sphere_Sapphire/Hemi50A'],
     [r'Cyl_Sapphire/(.*?Cyl[0-9]{2,3}A)_(50|100)', r'Sub951By\2/\1'],
     ['(Cyl[0-9]{2,3}A)_CorrectCharge', r'\1/CorrectCharge'],
     ['(Cyl[0-9]{2,3}A)_New', r'\1/New'],
@@ -125,7 +116,7 @@ def find_prezipped():
     ]
     partnames = [
         part for part in partnames
-        if part not in prezipped_ignore_list
+        if not_ignored(part, ignore_list)
     ]
     return natsorted(partnames)
 
@@ -139,7 +130,7 @@ def find_zipped():
     ]
     partnames = [
         part for part in partnames
-        if part not in zipped_ignore_list
+        if not_ignored(part, ignore_list)
     ]
     return natsorted(partnames)
 
@@ -178,6 +169,20 @@ def find_analyzed():
         for filename in files
     ]
     return natsorted(partnames)
+
+def not_ignored(part, ignore_list):
+    """Check whether part should be ignored.
+    Regex is okay in ignore_list."""
+    for expr in ignore_list:
+        # if match is found
+        if re.match(expr, part) is not None:
+            # then the part should be ignored
+            # (not_ignored is false)
+            return False
+
+    # otherwise, don't ignore the part.
+    return True
+
 
 def apply_name_changes(pathlist):
     newlist = pathlist[:]
@@ -247,19 +252,19 @@ def whichstage():
     )
 
     print("Needs Linked:")
-    print(needs_linked)
+    print('\n'.join(needs_linked))
     print()
 
     print("Needs Unzipped:")
-    print(needs_unzipped)
+    print('\n'.join(needs_unzipped))
     print()
 
     print("Needs Parsed:")
-    print(needs_parsed)
+    print('\n'.join(needs_parsed))
     print()
 
     print("Needs Analyzed:")
-    print(needs_analyzed)
+    print('\n'.join(needs_analyzed))
     print()
 
     print("Creating workflow.")
@@ -406,14 +411,20 @@ def create_parse_task(partname, workflow, dependency=None):
     )
     dest = partname
 
-    script = "/home/oge1/lammps/sapphire/analysis/exec/parse.sh" 
+    # Don't remove substrate atoms for LJWall sims
+    # (there are no substrate atoms)
+    if 'LJWall' in partname:
+        script = "/home/oge1/lammps/sapphire/analysis/exec/parse_ljwall.sh" 
+    else:
+        script = "/home/oge1/lammps/sapphire/analysis/exec/parse.sh" 
+
     command = "{script} {source} {dest}"
 
     task = kale.workflow_objects.CommandLineTask(
         name="parse_{partname}",
         command=command,
         tags=['parse'],
-        #node_property='node',
+        node_property='node',
                 params=dict(
             source=source,
             dest=dest,
@@ -451,7 +462,7 @@ def create_analyze_task(partname, workflow, dependency=None):
         name="analyze_{partname}",
         command=command,
         tags=['analyze'],
-        #node_property='node',
+        node_property='node',
                 params=dict(
             source=source,
             dest=dest,
