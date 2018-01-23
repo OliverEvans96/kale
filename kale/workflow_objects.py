@@ -19,6 +19,7 @@ from fireworks.core.rocket_launcher import rapidfire
 # local
 import kale.batch_jobs
 
+# TODO - Convert print statements to logging statements
 
 # TODO - update all instances of default arguments set to a mutable e.g.; [], {}
 class WorkerPool(traitlets.HasTraits):
@@ -434,6 +435,7 @@ class Workflow(traitlets.HasTraits):
                 # Identify task by index and add to graph
                 node = self.index_dict[node_index]
                 subdag.add_node(node)
+
                 # Identify parent in main DAG
                 parent_list = list(self.dag.predecessors(node))
                 for parent in parent_list:
