@@ -192,7 +192,7 @@ def get_nodes_string(nodes_cores, node_property):
 
 
 # TODO - review
-def run_cmd_job(command, name, nodes_cores, time='10:00', node_property=None, poll_interval=60, mpiexec="/opt/open-mpi/ib-gnu44/bin/mpiexec"):
+def run_cmd_job(command, name, nodes_cores, log_dir='.', time='10:00', node_property=None, poll_interval=60, mpiexec="/opt/open-mpi/ib-gnu44/bin/mpiexec"):
     tmp_batch_script = get_tempfile()
     batch_manager = determine_batch_manager()
     if batch_manager == 'torque':
@@ -202,6 +202,7 @@ def run_cmd_job(command, name, nodes_cores, time='10:00', node_property=None, po
 #PBS -j oe
 #PBS -q default
 #PBS -N {name}
+#PBS -o {log_dir}/{name}.%j
 #PBS -r n
 cd $PBS_O_WORKDIR
 {command}"""
@@ -211,7 +212,7 @@ cd $PBS_O_WORKDIR
 #SBATCH -p debug
 #SBATCH -N {nodes_string}
 #SBATCH -t {time}
-#SBATCH -o {name}.%j
+#SBATCH -o {log_dir}/{name}.%j
 #SBATCH -C haswell
 #SBATCH -L SCRATCH
 {command}"""
@@ -221,6 +222,7 @@ cd $PBS_O_WORKDIR
         command=command,
         name=name,
         time=time,
+        log_dir=log_dir,
         #mpiexec=mpiexec,
         nodes_string=get_nodes_string(nodes_cores, node_property)
     )
