@@ -686,6 +686,15 @@ class Task(traitlets.HasTraits):
         print("Task run.")
 
 
+    # TODO: I want to add this custom __repr__, but it breaks
+    # bqplot drawing. All tasks appear on top of one another.
+    # I have no idea why this happens.
+    #def __repr__(self):
+    #    return '<kale {task_type}: "{task_name}">'.format(
+    #        task_type = self.__class__.__name__,
+    #        task_name = self.name
+    #    )
+
 class NotebookTask(Task):
     """
 
