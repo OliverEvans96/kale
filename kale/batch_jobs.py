@@ -191,6 +191,14 @@ def get_nodes_string(nodes_cores, node_property):
     return node_string
 
 
+def create_dir_for_file(filepath):
+    """Create the directory containing `filepath` if it doesn't exist"""
+    os.makedirs(
+        os.path.dirname(filepath),
+        exist_okay=True
+    )
+
+
 # TODO - review
 def run_cmd_job(command, name, nodes_cores, log_dir='.', time='10:00', node_property=None, poll_interval=60, mpiexec="/opt/open-mpi/ib-gnu44/bin/mpiexec"):
     tmp_batch_script = get_tempfile()
@@ -232,5 +240,13 @@ cd $PBS_O_WORKDIR
 
     with open(tmp_batch_script, 'w') as fh:
         fh.write(batch_string)
+
+    # Make sure log directory exists
+    create_dir_for_file(
+        "{log_dir}/{name}".format(
+            log_dir=log_dir,
+            name=name
+        )
+    )
 
     run_batch_job(tmp_batch_script, poll_interval)
