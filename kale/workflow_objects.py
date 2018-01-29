@@ -666,12 +666,13 @@ class NotebookTask(Task):
 
 class CommandLineTask(Task):
     """Command Line Task to be executed as a Workflow step."""
-    def __init__(self, name, command, nodes_cores=1, node_property=None, poll_interval=60, **kwargs):
+    def __init__(self, name, command, nodes_cores=1, log_dir='./kale_logs', node_property=None, poll_interval=60, **kwargs):
 
         self.command = command
         self.node_property = node_property
         self.nodes_cores = nodes_cores
         self.poll_interval = poll_interval
+        self.log_dir = log_dir
 
         user_fields = ['command']
 
@@ -696,7 +697,8 @@ class CommandLineTask(Task):
                 name=self.name,
                 nodes_cores=self.nodes_cores,
                 node_property=self.node_property,
-                poll_interval=self.poll_interval
+                poll_interval=self.poll_interval,
+                log_dir=self.log_dir
             )
         )
 

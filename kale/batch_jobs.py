@@ -210,7 +210,7 @@ def run_cmd_job(command, name, nodes_cores, log_dir='.', time='10:00', node_prop
 #PBS -j oe
 #PBS -q default
 #PBS -N {name}
-#PBS -o {log_dir}/{name}.%j
+#PBS -o {log_dir}/{name}.log
 #PBS -r n
 cd $PBS_O_WORKDIR
 {command}"""
@@ -220,7 +220,7 @@ cd $PBS_O_WORKDIR
 #SBATCH -p debug
 #SBATCH -N {nodes_string}
 #SBATCH -t {time}
-#SBATCH -o {log_dir}/{name}.%j
+#SBATCH -o {log_dir}/{name}.log
 #SBATCH -C haswell
 #SBATCH -L SCRATCH
 {command}"""
