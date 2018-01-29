@@ -397,33 +397,53 @@ class Workflow(traitlets.HasTraits):
 
         return ipw.VBox([fig, toolbar])
     
-    def check_selection_for_jumps(self):
+    def check_selection_for_dependency_gaps(self):
         """
         It's okay for a selcted task to have a parent or child
         which is not selected. But it's not okay to have
         a generational gap in selection.
+
+        TODO: Check for gaps in workflow.
+        Ultimately, the workflow should not run and the user
+        should be notified if an incorrect selection is made.
+
+        Perhaps by raising & catching exception, though
+        it may be better just to use an if statement.
         """
+        print("TODO: Not checking for subDAG gaps")
         pass
 
     def gen_subdag(self):
-        """Return DAG containing only steps which are to be run. (Not yet implemented.)"""
+        """Return DAG containing only steps which are to be run based on bqplot selection.
+        Currently, there may not be any gaps in dependencies.
+        e.g. if A -> B -> C, then A and C cannot be selected without B.
+        """
         subdag = networkx.DiGraph()
 
+        # If nothing is selected, then use the full workflow
         if self._bqgraph.selected is None or len(self._bqgraph.selected) == 0:
             return self.dag
-        else:
-            self.check_selection_for_jumps()
 
-            for node in self.dag.nodes():
-                node_index = node.index[self]
-                if node_index in self._bqgraph.selected:
-                    subdag.add_node(node)
-                    parent_list = list(self.dag.predecessors(node))
-                    if len(parent_list) > 0:
-                        for parent in parent_list:
-                            parent_index = parent.index[self]
-                            if parent_index in self._bqgraph.selected:
-                                subdag.add_edge(parent, node)
+        # If only some tasks are selected, then check for gaps
+        # and generate the subDAG
+        else:
+            self.check_selection_for_dependency_gaps()
+
+            # Add each node in selection
+            for node_index in self._bqgraph.selected:
+                # Identify task by index and add to graph
+                node = self.index_dict[node_index]
+                subdag.add_node(node)
+                # Identify parent in main DAG
+                parent_list = list(self.dag.predecessors(node))
+                for parent in parent_list:
+                    parent_index = parent.index[self]
+                    # Check whether parent is selected
+                    if parent_index in self._bqgraph.selected:
+                        # Creating the edge creates both
+                        # nodes if they aren't in the graph,
+                        # but avoids creating duplicate nodes.
+                        subdag.add_edge(parent, node)
 
             return subdag
 
