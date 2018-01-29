@@ -195,7 +195,7 @@ def create_dir_for_file(filepath):
     """Create the directory containing `filepath` if it doesn't exist"""
     os.makedirs(
         os.path.dirname(filepath),
-        exist_okay=True
+        exist_ok=True
     )
 
 
@@ -242,11 +242,12 @@ cd $PBS_O_WORKDIR
         fh.write(batch_string)
 
     # Make sure log directory exists
-    create_dir_for_file(
-        "{log_dir}/{name}".format(
-            log_dir=log_dir,
-            name=name
-        )
+    logpath = "{log_dir}/{name}".format(
+        log_dir=log_dir,
+        name=name
     )
+    print("Creating logpath")
+    create_dir_for_file(logpath)
+    print("Created path for {}".format(logpath))
 
     run_batch_job(tmp_batch_script, poll_interval)
