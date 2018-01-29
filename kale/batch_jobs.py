@@ -58,15 +58,15 @@ def get_tempfile():
 def create_appended_text_file(path, addition):
     fname = os.path.basename(path)
     newpath = get_tempfile()
-    
+
     with open(path) as fh:
         content = fh.read()
-        
+
     with open(newpath, 'w') as fh:
         fh.write(content)
         fh.write('\n')
         fh.write(addition)
-        
+
     return newpath
 
 def create_success_file():
@@ -150,15 +150,15 @@ def run_batch_job(batch_script, node_property=None, poll_interval=60):
     success_file = create_success_file()
     #print(success_file)
     randhash = gen_random_hash()
-    
+
     new_batch_script = wrap_batch_script(
-        batch_script, 
+        batch_script,
         success_file,
         randhash
     )
-    
+
     job_id = submit_batch_script(new_batch_script)
-    
+
     poll_success_file(success_file, job_id, randhash, poll_interval)
 
 def get_nodes_string(nodes_cores, node_property):
