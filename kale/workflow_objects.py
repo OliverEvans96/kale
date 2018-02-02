@@ -808,10 +808,13 @@ class NotebookTask(Task):
 
 class CommandLineTask(Task):
     """Command Line Task to be executed as a Workflow step."""
-    def __init__(self, name, command, nodes_cores=1, log_dir='./kale_logs', node_property=None, poll_interval=60, **kwargs):
+    def __init__(self, name, command, nodes_cores=1, batch=False, log_dir='./kale_logs', node_property=None, poll_interval=60, **kwargs):
 
         self.command = command
         self.node_property = node_property
+        # Whether to submit job via batch queue
+        # (or just run as process)
+        self.batch = batch
         self.nodes_cores = nodes_cores
         self.poll_interval = poll_interval
         self.log_dir = log_dir
@@ -831,18 +834,10 @@ class CommandLineTask(Task):
 
     def get_parsl_app(self, parsl_dfk):
         """Return the appropriate parsl wrapped function"""
-        return parsl_wrap(
-            self.wrap_func(run_bash),
-            parsl_dfk,
-            command=self.command
-        )
-
-    def _gen_firetask(self):
-        """Create a Firework for this task."""
-        #return fw.ScriptTask.from_str(self.command)
-        return fw.PyTask(
-            func='kale.batch_jobs.run_cmd_job',
-            kwargs=dict(
+        if self.batch:
+            return parsl_wrap(
+                self.wrap_func(run_cmd_job),
+                parsl_dfk,
                 command=self.command,
                 name=self.name,
                 nodes_cores=self.nodes_cores,
@@ -850,7 +845,29 @@ class CommandLineTask(Task):
                 poll_interval=self.poll_interval,
                 log_dir=self.log_dir
             )
-        )
+        else:
+            return parsl_wrap(
+                self.wrap_func(run_bash),
+                parsl_dfk,
+                command=self.command
+            )
+
+    def _gen_firetask(self):
+        """Create a Firework for this task."""
+        if self.batch:
+            return fw.PyTask(
+                func='kale.batch_jobs.run_cmd_job',
+                kwargs=dict(
+                    command=self.command,
+                    name=self.name,
+                    nodes_cores=self.nodes_cores,
+                    node_property=self.node_property,
+                    poll_interval=self.poll_interval,
+                    log_dir=self.log_dir
+                )
+            )
+        else:
+            return fw.ScriptTask.from_str(self.command)
 
 
 class PythonFunctionTask(Task):
