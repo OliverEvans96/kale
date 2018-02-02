@@ -18,7 +18,7 @@ from fireworks.core.rocket_launcher import rapidfire
 import parsl
 
 # local
-import kale.batch_jobs
+from kale.batch_jobs import run_batch_job
 from kale.parsl_wrappers import parsl_wrap, parsl_app_after_futures
 
 def run_bash(command):
@@ -909,6 +909,16 @@ class BatchTask(Task):
             user_fields=user_fields,
             substitute_strings=substitute_strings,
             **kwargs
+        )
+
+    def get_parsl_app(self, parsl_dfk):
+        """Return the appropriate parsl wrapped function"""
+        return parsl_wrap(
+            self.wrap_func(run_batch_job),
+            parsl_dfk,
+            batch_script=self.batch_script,
+            #node_property=self.node_property,
+            poll_interval=self.poll_interval
         )
 
     def _gen_firetask(self):
