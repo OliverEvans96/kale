@@ -18,7 +18,7 @@ from fireworks.core.rocket_launcher import rapidfire
 import parsl
 
 # local
-from kale.batch_jobs import run_batch_job
+from kale.batch_jobs import run_batch_job, run_cmd_job
 from kale.parsl_wrappers import parsl_wrap, parsl_app_after_futures
 
 def run_bash(command):
