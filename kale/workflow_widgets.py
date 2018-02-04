@@ -4,7 +4,6 @@
 # stdlib
 import time
 from concurrent.futures import ThreadPoolExecutor
-import multiprocessing
 import cgi
 
 # 3rd party
@@ -685,8 +684,7 @@ class WorkerPoolWidget(ipw.VBox):
         self.add_pool(
             name='default',
             location='localhost',
-            executor='parsl',
-            num_workers=multiprocessing.cpu_count(),
+            executor='parsl'
         )
 
     def get_locations(self):

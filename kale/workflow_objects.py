@@ -8,6 +8,7 @@ import yaml
 from datetime import datetime
 import concurrent.futures as cf
 import logging
+import multiprocessing
 
 # 3rd party
 import bqplot as bq
@@ -78,18 +79,22 @@ class WorkerPool(traitlets.HasTraits):
     location = traitlets.Unicode()
     num_workers = traitlets.Int()
 
-    def __init__(self, name, num_workers, fwconfig=None, location='localhost',  wf_executor='fireworks'):
+    def __init__(self, name, num_workers=None, fwconfig=None, location='localhost',  wf_executor='fireworks'):
 
         super().__init__()
 
         self.futures = []
         self.workers = []
         self.name = name
-        self.num_workers = num_workers
         self.wf_executor = wf_executor
         self.fwconfig = fwconfig
         self.location = location
         self.log_area = ipw.Output()
+
+        if num_workers:
+            self.num_workers = num_workers
+        else:
+            self.num_workers = multiprocessing.cpu_count()
 
         if self.wf_executor == 'fireworks':
             self._add_workers(num_workers)
