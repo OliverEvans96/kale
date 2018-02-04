@@ -4,6 +4,8 @@ import os
 import sys
 import subprocess
 import random
+import xml.etree.ElementTree as et
+import logging
 
 # 3rd party
 import tempfile
@@ -37,20 +39,72 @@ def gen_fifo():
 def gen_random_hash():
     return "%032x" % random.getrandbits(128)
 
-def job_running(job_id, check_cmd):
-    try:
-        print(*[check_cmd, str(job_id)])
-        out = subprocess.check_output(
-            "{} {}".format(check_cmd, str(job_id)),
-            shell=True
-        ).decode().strip()
-        print('out = "{}"'.format(out))
-        if len(out) > 0:
-            return True
-        else:
-            return False
-    except subprocess.CalledProcessError:
-        return False
+def job_running_or_queued(job_id, batch_manager):
+    if batch_manager == 'torque':
+        return torque_job_running_or_queued(job_id)
+    else:
+        raise NotImplementedError(
+            "Batch manager {} not supported".format(
+                batch_manager
+            )
+        )
+
+def torque_job_running_or_queued(job_id):
+    """Determine if torque job is running by id
+
+    Parameters
+    ----------
+    job_id : int        Job number, without batch queue
+
+    Returns
+    -------
+    running : bool      Whether the job is currently running
+    """
+
+    qstat_xml = subprocess.check_output(
+        'qstat -x',
+        shell=True
+    ).decode().strip()
+
+    xml_data = et.fromstring(qstat_xml)
+
+    logging.info("Torque - Looking for job {}".format(job_id))
+
+    for job in xml_data:
+        # Convert xml to dict
+
+        this_job_id = job.findtext('Job_Id')
+
+        #logging.debug("Checking job {}".format(this_job_id))
+        #job_dict = {prop.tag: prop.text for prop in job}
+        #logging.debug(job_dict)
+
+        # If this is the correct job
+        if this_job_id == job_id:
+            logging.info("Found matching job.")
+            job_state = job.findtext('job_state')
+
+            # If the job is running
+            if job_state in 'RQ':
+                logging.info("Job is running or queued (%s).", job_state)
+                return True
+
+            # If the desired job is not running:
+            else:
+                logging.info(
+                    "Job not running - state is '{}'".format(
+                        job_state
+                    )
+                )
+                return False
+        #else:
+            #logging.debug("Not a match.")
+
+    # If the job is not found, raise an exception
+    logging.warning("Job {} not found.".format(job_id))
+    return False
+    #raise NameError('Job {} not found'.format(job_id))
+
 
 def get_tempfile():
     return subprocess.check_output('mktemp').decode().strip()
@@ -76,11 +130,14 @@ def create_success_file():
 
 def wrap_batch_script(batch_script, success_file, randhash):
     success_command = """
+
+    cat {success_file} > tmp_success_file.{randhash}
     stdbuf -o0 -e0 echo '{randhash}' > {success_file}
-    #while [ -z $(grep -Fx '{randhash}' '{success_file}') ]
-    #do
-    #    sleep 1
-    #done
+    while [ -z $(grep -Fx '{randhash}' '{success_file}') ]
+    do
+        sleep 1
+    done
+    cat {success_file} >> tmp_success_file.{randhash}
     """.format(
         randhash=randhash,
         success_file=success_file
@@ -107,48 +164,60 @@ def submit_batch_script(script_path):
         sub_cmd = 'sbatch --parsable'
 
     command = ' '.join([sub_cmd, script_path])
-    print("QSUB COMMAND: {}".format(command))
+    logging.debug("QSUB COMMAND: {}".format(command))
     return subprocess.check_output(command, shell=True).decode().strip()
 
 def poll_success_file(filepath, job_id, randhash, poll_interval):
     batch_manager = determine_batch_manager()
-    if batch_manager == 'torque':
-        check_cmd = 'qstat'
-    elif batch_manager == 'slurm':
-        check_cmd = 'squeue -h --job'
 
     try:
         #print("Before while")
-        while job_running(job_id, check_cmd):
+        while job_running_or_queued(job_id, batch_manager):
+            logging.debug('Job running or queued. Sleeping for %s seconds.', poll_interval)
             time.sleep(poll_interval)
-        #print("After while")
 
+        logging.info('Job not running or queued. Sleeping for 3 seconds.')
+        time.sleep(3)
         # Job is no longer in batch queue
         try:
+            logging.info("Checking file '%s' for hash", filepath)
             with open(filepath) as fh:
                 message = fh.read().strip()
+                logging.debug("Message is '%s'", message)
             if message == randhash:
-                print("Job success.")
+                logging.info("Hash correct. Job success.")
             elif message == '':
-                print("Job failed.")
+                logging.error("Empty message. Job failed.")
                 #sys.exit(1)
             else:
-                print("Wrong hash!")
-                print("Wanted '{}'".format(randhash))
-                print("Received '{}'".format(message))
+                logging.error("Wrong hash!")
+                logging.error("Wanted '{}'".format(randhash))
+                logging.error("Received '{}'".format(message))
                 #sys.exit(1)
         except FileNotFoundError:
             # No success message means job failed
-            print("Unexpected error.")
+            logging.error("Unexpected error. File not found.")
             #sys.exit(1)
     finally:
         # Always delete success file
         os.remove(filepath)
+        logging.debug("Deleted hash file %s", filepath)
 
 def run_batch_job(batch_script, node_property=None, poll_interval=60):
-    print("Run batch job")
+    """Run batch job.
+
+    Parameters
+    ----------
+    batch_script : str          Path of batch script
+    node_property : str         Run only on node with this property
+    poll_interval : int         Number of seconds between completion checks
+    """
+    logging.info("""Run batch job.
+    batch_script = '%s'
+    node_property = '%s'
+    poll_interval = '%s'
+    """, batch_script, node_property, poll_interval)
     success_file = create_success_file()
-    #print(success_file)
     randhash = gen_random_hash()
 
     new_batch_script = wrap_batch_script(
@@ -159,7 +228,9 @@ def run_batch_job(batch_script, node_property=None, poll_interval=60):
 
     job_id = submit_batch_script(new_batch_script)
 
+    logging.info("Job submitted. Polling success file.")
     poll_success_file(success_file, job_id, randhash, poll_interval)
+    logging.info("Polling complete. run_batch_job finished.")
 
 def get_nodes_string(nodes_cores, node_property):
     """
@@ -246,8 +317,7 @@ cd $PBS_O_WORKDIR
         log_dir=log_dir,
         name=name
     )
-    print("Creating logpath")
     create_dir_for_file(logpath)
-    print("Created path for {}".format(logpath))
+    logging.debug("Created logpath for {}".format(logpath))
 
     run_batch_job(tmp_batch_script, poll_interval)

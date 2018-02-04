@@ -7,6 +7,7 @@ import time
 import yaml
 from datetime import datetime
 import concurrent.futures as cf
+import logging
 
 # 3rd party
 import bqplot as bq
@@ -20,6 +21,10 @@ import parsl
 # local
 from kale.batch_jobs import run_batch_job, run_cmd_job
 from kale.parsl_wrappers import parsl_wrap, parsl_app_after_futures
+
+
+# Set up logging
+logging.basicConfig(filename='kale.log', level=logging.DEBUG)
 
 def run_bash(command):
     """Run bash command as subprocess, and return stdout as decoded str.
@@ -810,6 +815,21 @@ class CommandLineTask(Task):
     """Command Line Task to be executed as a Workflow step."""
     def __init__(self, name, command, nodes_cores=1, batch=False, log_dir='./kale_logs', node_property=None, poll_interval=60, **kwargs):
 
+
+        logging.debug(
+            """Creating CommandLineTask.
+name = '%s'
+command = '%s'
+node_cores = '%s'
+batch = '%s'
+log_dir = '%s'
+node_property = '%s'
+poll_interval = '%s'
+""",
+            name, command, nodes_cores, batch,
+            log_dir, node_property, poll_interval
+        )
+
         self.command = command
         self.node_property = node_property
         # Whether to submit job via batch queue
@@ -919,6 +939,12 @@ class BatchTask(Task):
 
         user_fields = ['batch_script']
         substitute_strings = ['batch_script']
+
+        logging.debug("""Creating BatchTask.
+        batch_script = '%s'
+        node_property = '%s'
+        poll_interval = '%s'
+        """, batch_script, node_property, poll_interval)
 
         super().__init__(
             name=name,
