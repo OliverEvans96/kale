@@ -6,6 +6,7 @@ tmp*
 FW.json
 launcher_*/*
 .watch_job_*
+kale_logs/
 
 # Torque job submission
 *.[o,e][0-9]*
