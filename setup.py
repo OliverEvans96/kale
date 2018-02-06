@@ -19,5 +19,10 @@ setup(
         'paramiko>=2.3.0',
         'pydot>=1.2.3',
         'traitlets>=4.3.2'
-    ]
+    ],
+    entry_points = {
+        'console_scripts': [
+            'kale-manager = kale.manager:main'
+        ]
+    },
 )

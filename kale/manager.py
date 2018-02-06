@@ -1,9 +1,14 @@
 # Kale Manager Service
 
-from flask import Flask, request
-import kale
-import kale.serialize as ser
+#stdlib
 import sqlite3
+
+# 3rd party
+from flask import Flask, request
+
+# kale
+from . import workflow_objects
+from . import serialize
 
 listen_port = 12643
 app = Flask('kale')
@@ -22,15 +27,18 @@ app = Flask('kale')
 def submit_parsl():
 
     wf_bytes = request.data
-    wf = ser.deserialize_wf(wf_bytes)
-    pool = kale.workflow_objects.WorkerPool(
+    wf = serialize.deserialize_wf(wf_bytes)
+    pool = workflow_objects.WorkerPool(
         wf_executor='parsl',
         num_workers=2,
         name='parsl_pool'
     )
     pool.parsl_run(wf)
 
+    return "Workflow submitted."
+
 def main():
+    print("Kale Manager Service Started.")
     app.run(port=listen_port, debug=True)
 
 if __name__ == '__main__':

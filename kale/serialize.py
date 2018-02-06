@@ -1,5 +1,6 @@
-from . import workflow_objects
 import dill
+
+from . import workflow_objects
 
 # Serialize DAG
 def get_node_indices(nodes, wf):
@@ -103,10 +104,8 @@ def sanitize_tasks(index_dict):
 def construct_task(task_state):
     """Construct Kale Task from state dict"""
     task_type = task_state.pop('task_type')
-    if task_type == 'PythonFunctionTask':
-        task = workflow_objects.PythonFunctionTask(**task_state)
-
-    return task
+    task_class = getattr(workflow_objects, task_type)
+    return task_class(**task_state)
 
 def reconstruct_index_dict(index_dict_sanitized):
     return {

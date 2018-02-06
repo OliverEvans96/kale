@@ -18,6 +18,7 @@ def determine_batch_manager():
 
     for manager, command in options.items():
         # Returns 0 if option exists, 1 otherwise
+        #TODO: This prints unnecessary junk to the console.
         if not subprocess.call(['which', command]):
             return manager
 
