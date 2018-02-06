@@ -6,8 +6,7 @@ import subprocess
 import random
 import xml.etree.ElementTree as et
 import logging
-
-# 3rd party
+import shutil
 import tempfile
 
 def determine_batch_manager():
@@ -17,9 +16,8 @@ def determine_batch_manager():
     }
 
     for manager, command in options.items():
-        # Returns 0 if option exists, 1 otherwise
-        #TODO: This prints unnecessary junk to the console.
-        if not subprocess.call(['which', command]):
+        # Returns path if found, None otherwise
+        if shutil.which(command):
             return manager
 
     raise ValueError("Could not locate batch manager.")
