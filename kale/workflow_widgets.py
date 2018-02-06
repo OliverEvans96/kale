@@ -694,7 +694,7 @@ class WorkerPoolWidget(ipw.VBox):
     def get_executors(self):
         return ['parsl', 'fireworks']
 
-    def add_pool(self, name, num_workers, executor, location='localhost'):
+    def add_pool(self, name, executor, num_workers=None, location='localhost'):
         """Add WorkerPool with name `name` and `num_workers` workers to widget."""
         # Check for name conflicts
         if name in self._pool_dict.keys():

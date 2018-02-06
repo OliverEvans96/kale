@@ -5,10 +5,12 @@ import sqlite3
 
 # 3rd party
 from flask import Flask, request
+import dill
 
 # kale
 from . import workflow_objects
 from . import serialize
+from . import db
 
 listen_port = 12643
 app = Flask('kale')
@@ -26,16 +28,29 @@ app = Flask('kale')
 @app.route('/submit_parsl', methods=['POST'])
 def submit_parsl():
 
+    # Retrieve request data
     wf_bytes = request.data
-    wf = serialize.deserialize_wf(wf_bytes)
+
+    # Connect to DB
+    c = db.connect()
+    init(c)
+
+    # Store in DB
+    wf_dict = dill.loads(wf_bytes)
+    db.add_wf(c, wf_dict)
+
+    # Create WorkerPool
     pool = workflow_objects.WorkerPool(
         wf_executor='parsl',
         num_workers=2,
         name='parsl_pool'
     )
+
+    # Execute workflow
+    wf = serialize.deserialize_wf(wf_bytes)
     pool.parsl_run(wf)
 
-    return "Workflow submitted."
+    return "TODO: supply num_workers via POST"
 
 def main():
     print("Kale Manager Service Started.")
