@@ -3,6 +3,7 @@ __pycache__
 tmp/
 tmp*
 .*.swp
+.#*
 FW.json
 launcher_*/*
 .watch_job_*

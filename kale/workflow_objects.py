@@ -283,18 +283,22 @@ class Worker(traitlets.HasTraits):
         )
 
 
+#TODO: Probably don't need Workflow.tasks and Workflow.index_dict
+# They're basically equivalent, but the former is a list
+# and the latter is a dict.
 class Workflow(traitlets.HasTraits):
 
     dag = traitlets.Instance(networkx.DiGraph)
     name = traitlets.Unicode()
     index_dict = traitlets.Dict()
     fig_layout = traitlets.Instance(ipw.Layout)
-    task_names = traitlets.List(trait=traitlets.Unicode())
-    wf_executor = traitlets.Unicode(allow_none=True)
+    tasks = traitlets.List()
+    _task_names = traitlets.List(trait=traitlets.Unicode())
+    edges = traitlets.List()
     readme = traitlets.Unicode()
     tag_dict = traitlets.Dict()
 
-    def __init__(self, name):
+    def __init__(self, name, readme=None):
 
         super().__init__()
 
@@ -303,10 +307,13 @@ class Workflow(traitlets.HasTraits):
         self.index_dict = {}
         #self.fig_layout = ipw.Layout(width='600px', height='800px')
         self.fig_layout = ipw.Layout(width='1000px', height='800px')
+        self.tasks = []
         self._task_names = []
+        self.edges = []
 
-        # Workflow executor - to be defined on initialization of wf executor.
-        self.wf_executor = None
+        if readme:
+            self.readme = readme
+
         self._bqgraph = None
 
     def get_future(self, index):
@@ -347,10 +354,14 @@ class Workflow(traitlets.HasTraits):
         Appends dependencies to those already in place.
         """
 
-        print("Adding deps: {} <- {}".format(task, dependencies))
+        # print("Adding deps: {} <- {}".format(
+        #     task.name,
+        #     [dep.name for dep in dependencies]
+        # ))
 
         for dependency in dependencies:
             self.dag.add_edge(dependency, task)
+            self.edges.append((dependency, task))
 
         # Store dependency relationships in all involved nodes
         if task.dependencies[self]:
@@ -376,7 +387,7 @@ class Workflow(traitlets.HasTraits):
         super().__init__()
 
         # Ensure that tasks are not repeated.
-        if task in self.dag.nodes():
+        if task in self.tasks:
             raise ValueError("Task already present in Workflow. Please pass a deepcopy if you wish to repeat the Task.")
         elif task.name in self._task_names:
             raise ValueError("Task name '{}' already present in Workflow. Please use a unique name.".format(task.name))
@@ -384,7 +395,10 @@ class Workflow(traitlets.HasTraits):
         # Determine index for this Task in this Workflow
         index = self.dag.number_of_nodes()
         # Inform workflow and task of this assignment
-        self.dag.add_node(task, index=index)
+        # TODO: I think index=index is useless here.
+        self.dag.add_node(task)
+        self.tasks.append(task)
+        self._task_names.append(task.name)
         task.index[self] = index
         self.index_dict[index] = task
 
@@ -402,7 +416,7 @@ class Workflow(traitlets.HasTraits):
 
     def get_task_by_name(self, name):
         """Return the Task object with the given name in this Workflow."""
-        for task in self.dag.nodes():
+        for task in self.tasks:
             try:
                 if task.name == name:
                     return task
@@ -455,7 +469,7 @@ class Workflow(traitlets.HasTraits):
         pos = networkx.nx_pydot.graphviz_layout(self.dag, prog='dot')
         N = self.dag.number_of_nodes()
 
-        x, y = [[pos[node][i] for node in self.dag.nodes()] for i in range(2)]
+        x, y = [[pos[node][i] for node in self.tasks] for i in range(2)]
 
         node_data = [
             {
@@ -463,7 +477,7 @@ class Workflow(traitlets.HasTraits):
                 'shape': 'rect',
                 **node.get_user_dict()
             }
-            for node in self.dag.nodes()
+            for node in self.tasks
         ]
 
         link_data = [
@@ -471,7 +485,7 @@ class Workflow(traitlets.HasTraits):
                 'source': source.index[self],
                 'target': target.index[self]
             }
-            for source, target in self.dag.edges()
+            for source, target in self.edges
         ]
 
         xs = bq.LinearScale()
@@ -494,7 +508,7 @@ class Workflow(traitlets.HasTraits):
         )
 
         # graph.tooltip = bq.Tooltip(
-        #     fields=self.dag.nodes()[0].user_fields
+        #     fields=self.tasks[0].user_fields
         # )
 
         return graph
@@ -768,7 +782,6 @@ class Task(traitlets.HasTraits):
         This function should be overloaded by child classes.
         """
         print("Task run.")
-
 
 class NotebookTask(Task):
     """
