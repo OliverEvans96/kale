@@ -9,6 +9,7 @@ import os.path
 def connect(db_path='~/.kale_status.db'):
     abs_path = os.path.expanduser(db_path)
     conn = sqlite3.connect(abs_path)
+    print("Connected to DB at {}".format(abs_path))
     return conn.cursor()
 
 # Create tables
@@ -58,7 +59,7 @@ def create_wf_task_junction_table(c):
     c.execute("""CREATE TABLE IF NOT EXISTS wf_tasks(
     junction_id integer PRIMARY KEY AUTOINCREMENT,
     wf_id INTEGER,
-    task_id INTEGER
+    task_id INTEGER,
     task_index INTEGER
     );""")
 
@@ -81,15 +82,28 @@ def add_wf(c, wf_dict):
         VALUES (?, ?, ?, ?)""",
         [
             wf_dict['name'],
-            wf_dict['wf_executor'],
+            #TODO: Don't hard-code this here
+            # In fact, not sure whether Workflow should be
+            # intrinsically associated with executor.
+            # It could be launched with multiple executors
+            # on multiple occasions.
+            'parsl',
             getpass.getuser(),
             datetime.datetime.now().timestamp()
         ]
     )
     wf_id = c.lastrowid
 
-    for task_index, task_dict in wf_dict['index_dict_sanitized']:
+    for task_index, task_dict in wf_dict['index_dict_sanitized'].items():
         add_task(c, task_dict, wf_id, task_index)
+
+    #TODO: Update task/workflow status on creation?
+
+    # Write to DB
+    c.connection.commit()
+
+    print("Workflow added!")
+    print(get_wf(c, wf_id))
 
     return wf_id
 
@@ -97,11 +111,11 @@ def add_task(c, task_dict, wf_id, task_index):
     """Call after workflow is created."""
     c.execute(
         """INSERT INTO tasks
-        (task_name, task_type, owner, submitted)
-        VALUES (?, ?, ?, ?, ?)""",
+        (name, task_type, owner, submitted)
+        VALUES (?, ?, ?, ?)""",
         [
-            wf_dict['task_name'],
-            wf_dict['task_type'],
+            task_dict['name'],
+            task_dict['task_type'],
             getpass.getuser(),
             datetime.datetime.now().timestamp()
         ]
@@ -112,8 +126,8 @@ def add_task(c, task_dict, wf_id, task_index):
     link_task_to_wf(c, task_id, wf_id, task_index)
 
     # Link to tags
-    if 'tags' in wf_dict:
-        for tag in wf_dict['tags']:
+    if 'tags' in task_dict:
+        for tag in task_dict['tags']:
             if not tag_exists(c, tag):
                 add_tag(tag)
             link_tag_to_task(c, tag, task_id)
@@ -171,6 +185,8 @@ def update_wf_status(c, wf_id, status):
             wf_id
         ]
     )
+    # Write to DB
+    c.connection.commit()
 
 def update_task_status(c, task_id, status):
     c.execute(
@@ -184,6 +200,8 @@ def update_task_status(c, task_id, status):
             task_id
         ]
     )
+    # Write to DB
+    c.connection.commit()
 
 # Query status
 
@@ -257,10 +275,7 @@ def tag_exists(c, tag):
 # Initialize
 
 def init(c):
-    """Initialize"""
-    # Connect
-    c = connect()
-
+    """Initialize kale DB"""
     # Create tables
     create_wf_table(c)
     create_task_table(c)

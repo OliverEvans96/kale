@@ -33,9 +33,14 @@ def submit_parsl():
 
     # Connect to DB
     c = db.connect()
-    init(c)
+    db.init(c)
 
     # Store in DB
+    # TODO: This should perhaps happen upon
+    # execution rather than on submission?
+
+    # Or, at least execution hooks must be
+    # present to update task/WF status.
     wf_dict = dill.loads(wf_bytes)
     db.add_wf(c, wf_dict)
 
