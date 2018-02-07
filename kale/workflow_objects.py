@@ -226,20 +226,26 @@ class WorkerPool(traitlets.HasTraits):
         So far, I'm assuming that we're only executing PythonFunctionTasks via Parsl.
         """
 
+        print("Parsl run")
         workflow.futures = dict()
 
         dag = workflow.gen_subdag()
+        print("DAG")
 
         # Topological sort guarantees that parent node
         # appears in list before child.
         # Therefore, parent futures will exist
         # before children futures.
         for task in networkx.dag.topological_sort(dag):
+            print("task = {}".format(task.name))
             # Reset futures before submission
             task.reset_future()
 
+
+            print("future reset")
             # Prepare function to be run by parsl
             wrapped_func = task.get_parsl_app(self.parsl_dfk)
+            print("wrapped")
 
             # TODO: We have two levels of futures on the workflow
             # (not considering the ones on the tasks)
@@ -253,6 +259,8 @@ class WorkerPool(traitlets.HasTraits):
                 for dep in task.dependencies[workflow] if dep in dag
             ]
 
+
+            print("depended on {}".format(depends))
             # Submit functions to Parsl & save futures
             workflow.futures[task] = parsl_app_after_futures(
                 wrapped_func,
@@ -260,6 +268,7 @@ class WorkerPool(traitlets.HasTraits):
                 self.parsl_dfk,
             )
 
+            print("futures set")
 
 class Worker(traitlets.HasTraits):
     """Computational resource on which to execute jobs.
@@ -832,7 +841,7 @@ class NotebookTask(Task):
 
 class CommandLineTask(Task):
     """Command Line Task to be executed as a Workflow step."""
-    def __init__(self, name, command, nodes_cores=1, batch=False, log_dir='./kale_logs', node_property=None, poll_interval=60, **kwargs):
+    def __init__(self, name, command, nodes_cores=1, batch=False, log_dir='~/.kale_logs', node_property=None, poll_interval=60, **kwargs):
 
 
         logging.debug(
@@ -856,7 +865,7 @@ poll_interval = '%s'
         self.batch = batch
         self.nodes_cores = nodes_cores
         self.poll_interval = poll_interval
-        self.log_dir = log_dir
+        self.log_dir = os.path.expanduser(log_dir)
 
         user_fields = ['command']
 
