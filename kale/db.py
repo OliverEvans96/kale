@@ -44,7 +44,7 @@ def create_tag_table(c):
 # Create junction tables
 
 def create_task_tag_junction_table(c):
-    c.execute("""CREATE TABLE IF NOT EXISTS task_tag(
+    c.execute("""CREATE TABLE IF NOT EXISTS task_tags(
     junction_id INTEGER PRIMARY KEY AUTOINCREMENT,
     tag TEXT,
     task_id INTEGER
@@ -132,7 +132,7 @@ def add_task(c, task_dict, wf_id, task_index):
     if 'tags' in task_dict:
         for tag in task_dict['tags']:
             if not tag_exists(c, tag):
-                add_tag(tag)
+                add_tag(c, tag)
             link_tag_to_task(c, tag, task_id)
 
     return task_id
@@ -282,7 +282,7 @@ def tag_exists(c, tag):
     c.execute("""SELECT * FROM tags
         WHERE tag = ?
         """,
-        tag
+        [tag]
     )
 
     # If the query returned results, the tag exists.
