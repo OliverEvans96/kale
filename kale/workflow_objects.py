@@ -25,7 +25,8 @@ from kale.parsl_wrappers import parsl_wrap, parsl_app_after_futures
 
 
 # Set up logging
-logging.basicConfig(filename='kale.log', level=logging.DEBUG)
+logpath='~/.kale.log'
+logging.basicConfig(filename=os.path.expanduser(logpath), level=logging.DEBUG)
 
 def run_bash(command):
     """Run bash command as subprocess, and return stdout as decoded str.

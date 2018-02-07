@@ -130,13 +130,13 @@ def create_success_file():
 def wrap_batch_script(batch_script, success_file, randhash):
     success_command = """
 
-    cat {success_file} > tmp_success_file.{randhash}
+    #cat {success_file} > tmp_success_file.{randhash}
     stdbuf -o0 -e0 echo '{randhash}' > {success_file}
     while [ -z $(grep -Fx '{randhash}' '{success_file}') ]
     do
         sleep 1
     done
-    cat {success_file} >> tmp_success_file.{randhash}
+    #cat {success_file} >> tmp_success_file.{randhash}
     """.format(
         randhash=randhash,
         success_file=success_file
@@ -211,6 +211,7 @@ def run_batch_job(batch_script, node_property=None, poll_interval=60):
     node_property : str         Run only on node with this property
     poll_interval : int         Number of seconds between completion checks
     """
+
     logging.info("""Run batch job.
     batch_script = '%s'
     node_property = '%s'
