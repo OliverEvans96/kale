@@ -102,8 +102,11 @@ def add_wf(c, wf_dict):
     # Write to DB
     c.connection.commit()
 
-    print("Workflow added!")
+    print("Workflow:")
     print(get_wf(c, wf_id))
+
+    print("Workflow tasks:")
+    print(get_wf_tasks(c, wf_id))
 
     return wf_id
 
@@ -152,7 +155,7 @@ def link_task_to_wf(c, task_id, wf_id, task_index):
     c.execute("""INSERT INTO wf_tasks
         (wf_id, task_id, task_index)
         VALUES (?, ?, ?);""",
-        [task_id, wf_id, task_index]
+        [wf_id, task_id, task_index]
     )
     junction_id = c.lastrowid
     return junction_id
@@ -253,6 +256,22 @@ def get_all_wfs(c):
 def get_all_tasks(c):
     c.execute("""SELECT * FROM tasks""")
     return c.fetchall()
+
+# Refined queries
+
+def get_wf_tasks(c, wf_id):
+    """Query all tasks in workflow"""
+    c.execute(
+        """SELECT tasks.*
+        FROM tasks
+        INNER JOIN wf_tasks ON tasks.task_id = wf_tasks.task_id
+        WHERE wf_tasks.wf_id = ?
+        """,
+        [wf_id]
+    )
+    return c.fetchall()
+
+
 
 
 # Boolean queries

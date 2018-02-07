@@ -31,6 +31,17 @@ def submit_parsl():
     # Retrieve request data
     wf_bytes = request.data
 
+    # Create WorkerPool
+    pool = workflow_objects.WorkerPool(
+        wf_executor='parsl',
+        num_workers=2,
+        name='parsl_pool'
+    )
+
+    # Execute workflow
+    wf = serialize.deserialize_wf(wf_bytes)
+    pool.parsl_run(wf)
+
     # Connect to DB
     c = db.connect()
     db.init(c)
@@ -42,18 +53,7 @@ def submit_parsl():
     # Or, at least execution hooks must be
     # present to update task/WF status.
     wf_dict = dill.loads(wf_bytes)
-    db.add_wf(c, wf_dict)
-
-    # Create WorkerPool
-    pool = workflow_objects.WorkerPool(
-        wf_executor='parsl',
-        num_workers=2,
-        name='parsl_pool'
-    )
-
-    # Execute workflow
-    wf = serialize.deserialize_wf(wf_bytes)
-    pool.parsl_run(wf)
+    wf_id = db.add_wf(c, wf_dict)
 
     return "TODO: supply num_workers via POST"
 
